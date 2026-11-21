@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../api/api";
 
 import LanguageChart from "../../components/dashboard/LanguageChart";
 import ScoreChart from "../../components/dashboard/ScoreChart";
@@ -25,12 +25,10 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await axios.get(
-        "http://localhost:5000/api/reviews/stats",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const res = await api.get("/reviews/stats", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         }
       );
 
