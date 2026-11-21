@@ -18,7 +18,7 @@ export const reviewCode = async (sourceCode) => {
     console.log("================================");
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
 
       messages: [
         {
@@ -50,7 +50,7 @@ Keep the answer below 250 words.
       ],
 
       temperature: 0.2,
-      max_tokens: 700,
+      max_tokens: 2500,
     });
 
     console.log("================================");
@@ -79,7 +79,7 @@ export const reviewRepositorySummary = async (summaryText) => {
     console.log("================================");
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
 
       messages: [
         {
@@ -117,7 +117,7 @@ Keep the answer below 180 words.
       ],
 
       temperature: 0.2,
-      max_tokens: 400,
+      max_tokens: 2000,
     });
 
     console.log("================================");
