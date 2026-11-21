@@ -1,49 +1,58 @@
 import fs from "fs";
 import path from "path";
-import { reviewCode } from "../services/gemini.service.js";
-import { createReview } from "../services/review.service.js";
 
-/**
- * Upload Source Code File
- */
-export const uploadFile = async (req, res) => {
+import { reviewCode } from "../services/gemini.service.js";
+import Review from "../models/review.model.js";
+
+export const uploadCode = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: "No file uploaded.",
+        message: "Please upload a source code file.",
       });
     }
 
-    // Read uploaded file
-    const filePath = path.resolve(req.file.path);
+    const filePath = req.file.path;
+
     const sourceCode = fs.readFileSync(filePath, "utf-8");
 
-    // Detect language
-    const extension = path.extname(req.file.originalname).replace(".", "");
+    const extension = path.extname(req.file.originalname);
 
-    const aiReview = await reviewCode(sourceCode, extension);
+    const language = extension.replace(".", "");
 
-    // Save Review in MongoDB
-    const savedReview = await createReview({
-      userId: req.user._id,
+    console.log("=================================");
+    console.log("Reviewing Uploaded File...");
+    console.log(req.file.originalname);
+    console.log("=================================");
+
+    const aiReview = await reviewCode(sourceCode);
+
+    const review = await Review.create({
+      user: req.user._id,
       fileName: req.file.originalname,
-      language: extension,
+      language,
       sourceCode,
       aiReview,
-      score: 90,
     });
 
-    return res.status(200).json({
+    // Delete uploaded temp file
+    fs.unlinkSync(filePath);
+
+    res.status(201).json({
       success: true,
-      message: "AI Review Generated Successfully",
-      data: savedReview,
+      message: "Code reviewed successfully.",
+      data: review,
     });
-
   } catch (error) {
-    console.error("Upload Error:", error);
+    console.error("Upload Review Error:", error);
 
-    return res.status(500).json({
+    // Cleanup if file still exists
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(500).json({
       success: false,
       message: error.message,
     });

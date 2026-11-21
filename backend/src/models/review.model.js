@@ -8,30 +8,53 @@ const reviewSchema = new mongoose.Schema(
       required: true,
     },
 
-    fileName: {
+    // GitHub Repository URL
+    repoUrl: {
       type: String,
       default: "",
     },
 
-    language: {
-      type: String,
-      required: true,
-    },
-
-    sourceCode: {
-      type: String,
-      required: true,
-    },
-
-    aiReview: {
+    // Repository Summary
+    repositorySummary: {
       type: String,
       default: "",
     },
 
-    score: {
+    // Statistics
+    reviewedFiles: {
       type: Number,
       default: 0,
     },
+
+    totalFiles: {
+      type: Number,
+      default: 0,
+    },
+
+    // Individual File Reviews
+    reviews: [
+      {
+        fileName: {
+          type: String,
+          default: "",
+        },
+
+        language: {
+          type: String,
+          default: "",
+        },
+
+        aiReview: {
+          type: String,
+          default: "",
+        },
+
+        score: {
+          type: Number,
+          default: 0,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

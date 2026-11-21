@@ -1,12 +1,18 @@
 import api from "./api";
 
-export const uploadFile = async (file) => {
-  const formData = new FormData();
-
-  // Must match upload.single("codeFile")
-  formData.append("codeFile", file);
-
-  const response = await api.post("/upload", formData);
+/**
+ * Upload Source Code File
+ */
+export const uploadFile = async (formData) => {
+  const response = await api.post(
+    "/upload",
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
 
   return response.data;
 };

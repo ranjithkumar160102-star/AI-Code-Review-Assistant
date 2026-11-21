@@ -1,19 +1,56 @@
-import { registerUser, loginUser } from "../services/auth.service.js";
+import bcrypt from "bcryptjs";
+import User from "../models/user.model.js";
+import generateToken from "../utils/generateToken.js";
 
 /**
- * Register Controller
+ * Register User
  */
 export const register = async (req, res) => {
   try {
-    const result = await registerUser(req.body);
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required.",
+      });
+    }
+
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    const token = generateToken(user._id);
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully",
-      data: result,
+      message: "Registration successful.",
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profileImage: user.profileImage,
+      },
     });
   } catch (error) {
-    res.status(400).json({
+    console.error("Register Error:", error);
+
+    res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -21,22 +58,55 @@ export const register = async (req, res) => {
 };
 
 /**
- * Login Controller
+ * Login User
  */
 export const login = async (req, res) => {
-  console.log("===== LOGIN API HIT =====");
-  console.log(req.body);
-
   try {
-    const result = await loginUser(req.body);
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required.",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials.",
+      });
+    }
+
+    const matched = await bcrypt.compare(password, user.password);
+
+    if (!matched) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials.",
+      });
+    }
+
+    const token = generateToken(user._id);
 
     res.status(200).json({
       success: true,
-      message: "Login successful",
-      data: result,
+      message: "Login successful.",
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profileImage: user.profileImage,
+      },
     });
   } catch (error) {
-    res.status(401).json({
+    console.error("Login Error:", error);
+
+    res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -44,29 +114,56 @@ export const login = async (req, res) => {
 };
 
 /**
- * Get Logged-in User Profile
+ * Get Logged In User
  */
 export const getProfile = async (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: req.user,
-  });
+  try {
+    res.status(200).json({
+      success: true,
+      user: req.user,
+    });
+  } catch (error) {
+    console.error("Profile Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
 
 /**
- * Update Logged-in User Profile
+ * Update Profile
  */
 export const updateProfile = async (req, res) => {
-  const { name, profileImage } = req.body;
+  try {
+    const { name, profileImage } = req.body;
 
-  if (name) req.user.name = name;
-  if (profileImage) req.user.profileImage = profileImage;
+    const user = await User.findById(req.user._id);
 
-  await req.user.save();
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
 
-  res.status(200).json({
-    success: true,
-    message: "Profile updated successfully",
-    data: req.user,
-  });
+    user.name = name || user.name;
+    user.profileImage = profileImage || user.profileImage;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      user,
+    });
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };

@@ -5,18 +5,13 @@ export const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Check Authorization Header
+    // Authorization: Bearer <token>
     if (
-  req.headers.authorization &&
-  req.headers.authorization.startsWith("Bearer")
-) {
-
-  console.log("Authorization Header:", req.headers.authorization);
-
-  token = req.headers.authorization.split(" ")[1];
-
-  console.log("Received Token:", token);
-}
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
 
     if (!token) {
       return res.status(401).json({
@@ -25,34 +20,28 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    // Verify Token
-const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Verify JWT
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-console.log("Decoded:", decoded);
+    // Find user
+    const user = await User.findById(decoded.id).select("-password");
 
-// Debug
-const allUsers = await User.find().select("_id name email");
-console.log("All Users:", allUsers);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
 
-const user = await User.findById(decoded.id).select("-password");
-console.log("Found User:", user);
+    req.user = user;
 
-req.user = user;
-
-if (!req.user) {
-  return res.status(401).json({
-    success: false,
-    message: "User not found.",
-  });
-}
-
-next();
+    next();
   } catch (error) {
-  console.error("JWT Error:", error);
+    console.error("Auth Middleware Error:", error.message);
 
-  return res.status(401).json({
-    success: false,
-    message: error.message,
-  });
-}
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token.",
+    });
+  }
 };

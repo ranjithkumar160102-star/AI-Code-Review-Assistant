@@ -1,41 +1,37 @@
-import { createContext, useContext, useState } from "react";
-import api from "../api/api";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("user")) || null
-  );
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [token, setToken] = useState(
-    localStorage.getItem("token") || null
-  );
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
 
-  // Login
-  const login = async (email, password) => {
-    const response = await api.post("/auth/login", {
-      email,
-      password,
-    });
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
 
-    const { token, user } = response.data.data;
+    setLoading(false);
+  }, []);
 
+  const login = (userData, token) => {
     localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("user", JSON.stringify(userData));
 
-    setToken(token);
-    setUser(user);
-
-    return response.data;
+    setUser(userData);
   };
 
-  // Logout
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
-    setToken(null);
     setUser(null);
   };
 
@@ -43,9 +39,10 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
-        token,
         login,
         logout,
+        loading,
+        isAuthenticated: !!user,
       }}
     >
       {children}
@@ -53,4 +50,9 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+// Custom Hook
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+export default AuthProvider;

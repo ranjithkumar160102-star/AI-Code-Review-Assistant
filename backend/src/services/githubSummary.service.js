@@ -1,40 +1,47 @@
-import { reviewCode } from "./gemini.service.js";
+import { reviewRepositorySummary } from "./gemini.service.js";
 
 export const generateRepositorySummary = async (reviews) => {
   try {
+    console.log("================================");
+    console.log("Preparing Repository Summary...");
+    console.log("================================");
+
+    // Combine all file reviews
     const combinedReviews = reviews
       .map(
-        (review) =>
-          `File: ${review.fileName}
+        (review) => `
+========================================
+File: ${review.fileName}
+========================================
 
-${review.aiReview}`
+${review.aiReview}
+`
       )
-      .join("\n\n-------------------------\n\n");
+      .join("\n\n");
 
-    const prompt = `
-You are a Senior Software Architect.
+    console.log("Combined Reviews Length:", combinedReviews.length);
 
-Based on the following AI code reviews of multiple files, generate a repository summary.
+    // Generate repository summary
+    const summary = await reviewRepositorySummary(combinedReviews);
 
-Include:
+    console.log("================================");
+    console.log("Repository Summary Generated Successfully");
+    console.log("================================");
 
-1. Overall Repository Score (/100)
-2. Overall Code Quality
-3. Main Strengths
-4. Common Bugs
-5. Security Issues
-6. Performance Improvements
-7. Best Practices
-8. Final Conclusion
-
-Respond in clean Markdown.
-
-${combinedReviews}
-`;
-
-    return await reviewCode(prompt);
+    return summary;
   } catch (error) {
-    console.error("Repository Summary Error:", error);
-    return "Unable to generate repository summary.";
+    console.error("================================");
+    console.error("Repository Summary Error");
+    console.error(error);
+    console.error("================================");
+
+    return `
+# Repository Summary
+
+Unable to generate repository summary.
+
+Reason:
+${error.message}
+`;
   }
 };

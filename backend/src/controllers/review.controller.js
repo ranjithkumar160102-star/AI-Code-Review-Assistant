@@ -69,7 +69,6 @@ export const getReview = async (req, res) => {
       success: true,
       data: review,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -83,10 +82,7 @@ export const getReview = async (req, res) => {
  */
 export const removeReview = async (req, res) => {
   try {
-    const deleted = await deleteReview(
-      req.params.id,
-      req.user._id
-    );
+    const deleted = await deleteReview(req.params.id, req.user._id);
 
     if (!deleted) {
       return res.status(404).json({
@@ -99,7 +95,6 @@ export const removeReview = async (req, res) => {
       success: true,
       message: "Review deleted successfully",
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -109,7 +104,7 @@ export const removeReview = async (req, res) => {
 };
 
 /**
- * Dashboard Statistics
+ * Dashboard Stats
  */
 export const getStats = async (req, res) => {
   try {

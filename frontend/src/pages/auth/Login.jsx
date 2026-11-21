@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import api from "../../api/api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,20 +22,28 @@ const Login = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      setError("");
+  try {
+    setError("");
 
-      await login(formData.email, formData.password);
+    const response = await api.post("/auth/login", {
+      email: formData.email,
+      password: formData.password,
+    });
 
-      navigate("/dashboard");
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Login failed"
-      );
-    }
-  };
+    login(
+      response.data.user,
+      response.data.token
+    );
+
+    navigate("/dashboard");
+  } catch (err) {
+    setError(
+      err.response?.data?.message || "Login failed"
+    );
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100">

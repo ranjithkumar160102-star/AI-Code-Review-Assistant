@@ -1,30 +1,7 @@
 import Review from "../models/review.model.js";
 
 /**
- * Create a new code review
- */
-export const createReview = async ({
-  userId,
-  fileName,
-  language,
-  sourceCode,
-  aiReview,
-  score,
-}) => {
-  const review = await Review.create({
-    user: userId,
-    fileName,
-    language,
-    sourceCode,
-    aiReview,
-    score,
-  });
-
-  return review;
-};
-
-/**
- * Get all reviews of logged-in user
+ * Get User Reviews
  */
 export const getUserReviews = async (
   userId,
@@ -38,50 +15,45 @@ export const getUserReviews = async (
     user: userId,
   };
 
+  // Search Repository
   if (search) {
-    query.fileName = {
+    query.repoUrl = {
       $regex: search,
       $options: "i",
     };
   }
 
+  // Language Filter
   if (language) {
-    query.language = language;
+    query["reviews.language"] = language;
   }
 
-  let sortOption = {
-    createdAt: -1,
-  };
+  // Sorting
+  let sortOption = { createdAt: -1 };
 
   if (sort === "oldest") {
-    sortOption = {
-      createdAt: 1,
-    };
+    sortOption = { createdAt: 1 };
   }
 
-  if (sort === "score") {
-    sortOption = {
-      score: -1,
-    };
-  }
-
-  const total = await Review.countDocuments(query);
+  const skip = (page - 1) * limit;
 
   const reviews = await Review.find(query)
     .sort(sortOption)
-    .skip((page - 1) * limit)
+    .skip(skip)
     .limit(limit);
+
+  const total = await Review.countDocuments(query);
 
   return {
     reviews,
     total,
-    currentPage: Number(page),
+    currentPage: page,
     totalPages: Math.ceil(total / limit),
   };
 };
 
 /**
- * Get single review
+ * Get Single Review
  */
 export const getReviewById = async (reviewId) => {
   return await Review.findById(reviewId);
@@ -98,36 +70,58 @@ export const deleteReview = async (reviewId, userId) => {
 };
 
 /**
- * Dashboard Analytics
+ * Dashboard Statistics
  */
 export const getReviewStats = async (userId) => {
-  const reviews = await Review.find({ user: userId });
+  const docs = await Review.find({ user: userId });
 
-  const totalReviews = reviews.length;
+  let totalReviews = 0;
+  let totalScore = 0;
+
+  const languageMap = {};
+  const scoreChart = [];
+
+  docs.forEach((doc) => {
+    if (!doc.reviews || doc.reviews.length === 0) return;
+
+    doc.reviews.forEach((review, index) => {
+      const score = Number(review.score || 0);
+
+      totalReviews++;
+      totalScore += score;
+
+      const language = review.language || "Unknown";
+
+      languageMap[language] =
+        (languageMap[language] || 0) + 1;
+
+      if (score > 0) {
+  scoreChart.push({
+    file: review.fileName || "Untitled",
+    score,
+  });
+}
+    });
+  });
+
+  const languageChart = Object.keys(languageMap).map(
+    (language) => ({
+      language,
+      count: languageMap[language],
+    })
+  );
 
   const averageScore =
-    totalReviews === 0
-      ? 0
-      : Math.round(
-          reviews.reduce((sum, review) => sum + review.score, 0) /
-            totalReviews
-        );
-
-  const languagesUsed = new Set(
-    reviews.map((review) => review.language)
-  ).size;
-
-  const today = new Date().toDateString();
-
-  const todayReviews = reviews.filter(
-    (review) =>
-      new Date(review.createdAt).toDateString() === today
-  ).length;
+    totalReviews > 0
+      ? Number((totalScore / totalReviews).toFixed(1))
+      : 0;
 
   return {
     totalReviews,
     averageScore,
-    languagesUsed,
-    todayReviews,
+    languages: languageChart.length,
+    recentReviews: docs.length,
+    languageChart,
+    scoreChart,
   };
 };

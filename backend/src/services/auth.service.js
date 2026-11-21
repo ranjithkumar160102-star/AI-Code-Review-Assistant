@@ -3,35 +3,31 @@ import User from "../models/user.model.js";
 import generateToken from "../utils/generateToken.js";
 
 /**
- * Register a new user
+ * Register User
  */
-export const registerUser = async ({ name, email, password }) => {
-  // Check if user already exists
+export const registerUser = async (name, email, password) => {
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
     throw new Error("User already exists");
   }
 
-  // Hash password
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Create user
   const user = await User.create({
     name,
     email,
     password: hashedPassword,
   });
 
-  // Generate JWT
   const token = generateToken(user._id);
 
   return {
     user: {
-      id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
+      profileImage: user.profileImage,
       role: user.role,
     },
     token,
@@ -39,43 +35,44 @@ export const registerUser = async ({ name, email, password }) => {
 };
 
 /**
- * Login user
+ * Login User
  */
-export const loginUser = async ({ email, password }) => {
-
-  console.log("================================");
-  console.log("Email from frontend:", email);
-  console.log("Password from frontend:", password);
-
-  // Find user
+export const loginUser = async (email, password) => {
   const user = await User.findOne({ email });
-
-  console.log("User from DB:", user);
 
   if (!user) {
     throw new Error("Invalid email or password");
   }
 
-  // Compare password
   const isMatch = await bcrypt.compare(password, user.password);
-
-  console.log("Password Match:", isMatch);
-  console.log("================================");
 
   if (!isMatch) {
     throw new Error("Invalid email or password");
   }
 
-  // Generate JWT
   const token = generateToken(user._id);
 
   return {
     user: {
-      id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
+      profileImage: user.profileImage,
       role: user.role,
     },
     token,
   };
+};
+
+/**
+ * Get Current User
+ */
+export const getCurrentUser = async (userId) => {
+  const user = await User.findById(userId).select("-password");
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return user;
 };
