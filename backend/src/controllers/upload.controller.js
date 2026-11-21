@@ -4,6 +4,17 @@ import path from "path";
 import { reviewCode } from "../services/gemini.service.js";
 import Review from "../models/review.model.js";
 
+// Extract "Final Score" (0-100) from the AI markdown review
+const extractScore = (text = "") => {
+  const match =
+    text.match(/Final Score[^\d]{0,30}(\d{1,3})/i) ||
+    text.match(/(\d{1,3})\s*\/\s*100/);
+
+  if (!match) return 0;
+
+  return Math.min(100, Number(match[1]));
+};
+
 export const uploadCode = async (req, res) => {
   try {
     if (!req.file) {
@@ -21,19 +32,22 @@ export const uploadCode = async (req, res) => {
 
     const language = extension.replace(".", "");
 
-    console.log("=================================");
-    console.log("Reviewing Uploaded File...");
-    console.log(req.file.originalname);
-    console.log("=================================");
-
     const aiReview = await reviewCode(sourceCode);
+
+    const score = extractScore(aiReview);
 
     const review = await Review.create({
       user: req.user._id,
-      fileName: req.file.originalname,
-      language,
-      sourceCode,
-      aiReview,
+      reviewedFiles: 1,
+      totalFiles: 1,
+      reviews: [
+        {
+          fileName: req.file.originalname,
+          language,
+          aiReview,
+          score,
+        },
+      ],
     });
 
     // Delete uploaded temp file
@@ -42,7 +56,13 @@ export const uploadCode = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Code reviewed successfully.",
-      data: review,
+      data: {
+        _id: review._id,
+        fileName: req.file.originalname,
+        language,
+        aiReview,
+        score,
+      },
     });
   } catch (error) {
     console.error("Upload Review Error:", error);
